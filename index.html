@@ -1,73 +1,290 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Bruno Mini App</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 16px; }
-    .card { max-width: 720px; margin: 0 auto; }
-    textarea { width: 100%; height: 110px; padding: 10px; font-size: 16px; }
-    button { width: 100%; padding: 12px; font-size: 16px; margin-top: 10px; cursor: pointer; }
-    pre { white-space: pre-wrap; background: #f5f5f5; padding: 10px; border-radius: 8px; margin-top: 10px; }
-    .muted { opacity: .7; font-size: 13px; margin-top: 8px; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 16px;
+      background: var(--tg-theme-bg-color, #f5f5f5);
+      color: var(--tg-theme-text-color, #000);
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 16px;
+      color: var(--tg-theme-text-color, #000);
+    }
+    .status {
+      background: var(--tg-theme-secondary-bg-color, #fff);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+    .status-item {
+      margin: 4px 0;
+    }
+    .input-group {
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--tg-theme-hint-color, #ccc);
+      border-radius: 8px;
+      font-size: 15px;
+      background: var(--tg-theme-secondary-bg-color, #fff);
+      color: var(--tg-theme-text-color, #000);
+    }
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+      font-family: inherit;
+    }
+    .button-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    button {
+      flex: 1;
+      min-width: 140px;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      background: var(--tg-theme-button-color, #3390ec);
+      color: var(--tg-theme-button-text-color, #fff);
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    button:active {
+      opacity: 0.7;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .output {
+      background: var(--tg-theme-secondary-bg-color, #fff);
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--tg-theme-hint-color, #e0e0e0);
+      max-height: 400px;
+      overflow-y: auto;
+      font-size: 13px;
+      font-family: 'Courier New', monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .loading {
+      color: var(--tg-theme-hint-color, #999);
+      font-style: italic;
+    }
+    .error {
+      color: #d32f2f;
+    }
+    .success {
+      color: #388e3c;
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h2>Bruno Mini App</h2>
+  <div class="container">
+    <h1>🐻 Bruno Assistant</h1>
+    
+    <div class="status">
+      <div class="status-item"><strong>Окружение:</strong> <span id="env-type">-</span></div>
+      <div class="status-item"><strong>Platform:</strong> <span id="platform">-</span></div>
+      <div class="status-item"><strong>Version:</strong> <span id="version">-</span></div>
+      <div class="status-item"><strong>API Base:</strong> <span id="api-base">-</span></div>
+    </div>
 
-    <textarea id="msg" placeholder="Напиши запрос...">Hola! Представься и скажи, чем ты полезен.</textarea>
-    <button id="send">Отправить</button>
+    <div class="input-group">
+      <label for="message">Сообщение для Bruno:</label>
+      <textarea id="message" placeholder="Задай вопрос...">Привет! Как дела?</textarea>
+    </div>
 
-    <pre id="out">Ответ появится тут…</pre>
-    <div class="muted" id="meta"></div>
+    <div class="button-group">
+      <button id="btn-chat">💬 Спросить Bruno</button>
+      <button id="btn-ping">🏓 Ping API</button>
+    </div>
+
+    <div class="input-group">
+      <label for="doc-text">Загрузить текст (RAG ingest):</label>
+      <textarea id="doc-text" placeholder="Вставь текст для индексации..."></textarea>
+      <input type="text" id="doc-id" placeholder="ID документа (например: doc1)" style="margin-top: 8px;">
+    </div>
+
+    <div class="button-group">
+      <button id="btn-ingest">📚 Загрузить в базу</button>
+    </div>
+
+    <h3 style="margin: 16px 0 8px;">Ответ:</h3>
+    <div class="output" id="output">Ожидание запроса...</div>
   </div>
 
   <script>
+    // ==============================================
+    // A+ SMART API SELECTION
+    // ==============================================
+    
     const tg = window.Telegram?.WebApp;
-    if (tg) {
+    const isTelegram = !!tg;
+    
+    // Normalize URL (remove trailing slash)
+    function normalizeUrl(url) {
+      return url.replace(/\/$/, '');
+    }
+    
+    // Check for override via query string
+    const urlParams = new URLSearchParams(window.location.search);
+    const overrideApi = urlParams.get('api');
+    
+    // API endpoints
+    const LOCAL_API_BASE = 'http://localhost:8787';
+    const PROD_API_BASE = 'https://bruno-api.bruno-miniapp.workers.dev';
+    
+    // Smart selection
+    const API_BASE = overrideApi 
+      ? normalizeUrl(overrideApi) 
+      : (isTelegram ? PROD_API_BASE : LOCAL_API_BASE);
+    
+    console.log('🔧 API_BASE:', API_BASE);
+    console.log('📱 isTelegram:', isTelegram);
+    console.log('🔀 overrideApi:', overrideApi);
+    
+    // ==============================================
+    // UI INIT
+    // ==============================================
+    
+    if (isTelegram) {
       tg.ready();
       tg.expand();
-      document.body.style.background = tg.themeParams?.bg_color || "#fff";
-      document.getElementById("meta").textContent =
-        `Telegram WebApp: yes | user: ${tg.initDataUnsafe?.user?.username || "unknown"}`;
+      document.getElementById('env-type').textContent = 'Telegram WebApp';
+      document.getElementById('platform').textContent = tg.platform || 'unknown';
+      document.getElementById('version').textContent = tg.version || 'unknown';
     } else {
-      document.getElementById("meta").textContent =
-        "Telegram WebApp: no (если открыть в браузере — так и будет)";
+      document.getElementById('env-type').textContent = 'Browser (dev mode)';
+      document.getElementById('platform').textContent = navigator.platform || 'unknown';
+      document.getElementById('version').textContent = navigator.userAgent.split(' ').pop();
     }
-
-    const API_URL = "https://bruno-backend.fly.dev/chat";
-
-    async function send() {
-      const text = document.getElementById("msg").value.trim();
-      const out = document.getElementById("out");
-      if (!text) { out.textContent = "Введите текст."; return; }
-
-      out.textContent = "Отправляю…";
-
+    
+    document.getElementById('api-base').textContent = API_BASE;
+    
+    // ==============================================
+    // API CALLS
+    // ==============================================
+    
+    async function apiCall(endpoint, body) {
+      const url = `${API_BASE}${endpoint}`;
+      const output = document.getElementById('output');
+      
       try {
-        const r = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text })
+        output.textContent = `⏳ Запрос к ${url}...`;
+        output.className = 'output loading';
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
         });
-
-        const data = await r.json().catch(() => null);
-
-        if (!r.ok) {
-          out.textContent = `Ошибка ${r.status}: ${JSON.stringify(data)}`;
-          return;
+        
+        const data = await response.json();
+        
+        if (data.ok) {
+          output.className = 'output success';
+        } else {
+          output.className = 'output error';
         }
-
-        out.textContent = data?.reply ?? JSON.stringify(data);
-      } catch (e) {
-        out.textContent = "Сетевая ошибка: " + (e?.message || String(e));
+        
+        output.textContent = JSON.stringify(data, null, 2);
+        
+        // Vibrate on Telegram
+        if (isTelegram && tg.HapticFeedback) {
+          tg.HapticFeedback.notificationOccurred(data.ok ? 'success' : 'error');
+        }
+        
+        return data;
+      } catch (err) {
+        output.className = 'output error';
+        output.textContent = `❌ Ошибка: ${err.message}\n\nURL: ${url}`;
+        
+        if (isTelegram && tg.HapticFeedback) {
+          tg.HapticFeedback.notificationOccurred('error');
+        }
+        
+        throw err;
       }
     }
-
-    document.getElementById("send").addEventListener("click", send);
+    
+    // ==============================================
+    // BUTTON HANDLERS
+    // ==============================================
+    
+    document.getElementById('btn-ping').addEventListener('click', async () => {
+      await apiCall('/api/ping', { 
+        source: 'frontend', 
+        timestamp: new Date().toISOString() 
+      });
+    });
+    
+    document.getElementById('btn-chat').addEventListener('click', async () => {
+      const message = document.getElementById('message').value.trim();
+      
+      if (!message) {
+        alert('Введи сообщение!');
+        return;
+      }
+      
+      await apiCall('/api/chat', { 
+        message, 
+        client: isTelegram ? 'telegram' : 'browser' 
+      });
+    });
+    
+    document.getElementById('btn-ingest').addEventListener('click', async () => {
+      const text = document.getElementById('doc-text').value.trim();
+      const docId = document.getElementById('doc-id').value.trim();
+      
+      if (!text || !docId) {
+        alert('Заполни текст и ID документа!');
+        return;
+      }
+      
+      await apiCall('/api/ingest', { docId, text });
+    });
+    
+    // Enter key support for message
+    document.getElementById('message').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        document.getElementById('btn-chat').click();
+      }
+    });
   </script>
 </body>
 </html>
